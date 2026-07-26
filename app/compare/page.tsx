@@ -61,15 +61,16 @@ export default function ComparePage() {
   const [reports, setReports] = useState<Record<string, Report>>({});
   const [newDomain, setNewDomain] = useState('');
   const [loading, setLoading] = useState<string | null>(null);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
 
   useEffect(() => {
     fetch('/api/history')
       .then((r) => r.json())
       .then((d) => {
-        const unique = [...new Set((d.history || []).map((h: { domain: string }) => h.domain))].slice(0, 10);
-        return unique as string[];
+        const unique = Array.from(new Set((d.history || []).map((h: { domain: string }) => h.domain))) as string[];
+        setSuggestions(unique.slice(0, 10));
       })
-      .catch(() => []);
+      .catch(() => {});
   }, []);
 
   const addDomain = async (domain: string) => {
@@ -151,6 +152,22 @@ export default function ComparePage() {
             </form>
           )}
         </div>
+
+        {suggestions.filter((s) => !domains.includes(s)).length > 0 && domains.length < 4 && (
+          <div className="flex flex-wrap gap-1.5 mb-4">
+            <span className="text-xs text-[var(--text-muted)] mr-1 self-center">Quick add:</span>
+            {suggestions.filter((s) => !domains.includes(s)).map((s) => (
+              <button
+                key={s}
+                onClick={() => addDomain(s)}
+                disabled={!!loading}
+                className="rounded-full border border-[var(--border)] px-2.5 py-0.5 text-xs hover:border-brand-300 hover:text-brand-500 transition-colors disabled:opacity-50"
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        )}
 
         {domains.length >= 2 && (
           <Card>

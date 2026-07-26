@@ -18,7 +18,7 @@ import { CompetitorsSection } from '@/components/sections/competitors-section';
 import { TechSection } from '@/components/sections/tech-section';
 import { CustomersSection } from '@/components/sections/customers-section';
 import { AiAnalysisSection } from '@/components/sections/ai-analysis-section';
-import { ArrowLeft, RefreshCw, Download } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Download, Bookmark, BookmarkCheck } from 'lucide-react';
 
 export default function ReportPage() {
   const params = useParams();
@@ -29,6 +29,7 @@ export default function ReportPage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
+  const [saved, setSaved] = useState(false);
 
   const fetchReport = async (refresh = false) => {
     try {
@@ -56,8 +57,24 @@ export default function ReportPage() {
 
   useEffect(() => {
     fetchReport();
+    fetch('/api/saved')
+      .then((r) => r.json())
+      .then((d) => {
+        if ((d.saved || []).includes(domain)) setSaved(true);
+      })
+      .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [domain]);
+
+  const toggleSave = async () => {
+    const next = !saved;
+    setSaved(next);
+    await fetch('/api/saved', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ domain, action: next ? 'save' : 'remove' }),
+    }).catch(() => setSaved(!next));
+  };
 
   const exportJson = () => {
     if (!report) return;
@@ -93,6 +110,17 @@ export default function ReportPage() {
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              onClick={toggleSave}
+              className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm transition-colors ${
+                saved
+                  ? 'border-brand-300 bg-brand-50 text-brand-600 dark:border-brand-700 dark:bg-brand-900/20 dark:text-brand-400'
+                  : 'border-[var(--border)] hover:bg-slate-50 dark:hover:bg-slate-800'
+              }`}
+            >
+              {saved ? <BookmarkCheck size={14} /> : <Bookmark size={14} />}
+              {saved ? 'Saved' : 'Save'}
+            </button>
             <button
               onClick={() => fetchReport(true)}
               disabled={refreshing}

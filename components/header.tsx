@@ -1,8 +1,9 @@
 'use client';
 
 import { useTheme } from '@/components/theme-provider';
-import { Moon, Sun, Zap, Bot } from 'lucide-react';
+import { Moon, Sun, Zap, Bot, BarChart3, Bookmark } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 
 export function Header() {
   const { theme, toggle } = useTheme();
@@ -34,6 +35,18 @@ export function Header() {
         </a>
 
         <div className="flex items-center gap-3">
+          <Link
+            href="/compare"
+            className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium text-[var(--text-secondary)] hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+          >
+            <BarChart3 size={14} /> Compare
+          </Link>
+          <Link
+            href="/saved"
+            className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium text-[var(--text-secondary)] hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+          >
+            <Bookmark size={14} /> Saved
+          </Link>
           <button
             onClick={toggleAi}
             className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
