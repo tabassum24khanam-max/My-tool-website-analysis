@@ -104,7 +104,25 @@ export async function analyzeWebsite(
     runModule('customers', MODULE_TIMEOUT, () => analyzeCustomers(crawl), defaultCustomers),
   ]);
 
-  const aiM = await runModule('aiAnalysis', MODULE_TIMEOUT, () => analyzeAi(), defaultAiAnalysis);
+  const partialReport = {
+    domain,
+    url,
+    analyzedAt: new Date().toISOString(),
+    snapshot: snapshotM.result,
+    traffic: trafficM.result,
+    trafficSources: trafficSourcesM.result,
+    products: productsM.result,
+    marketing: marketingM.result,
+    ads: adsM.result,
+    social: socialM.result,
+    video: videoM.result,
+    seo: seoM.result,
+    competitors: competitorsM.result,
+    tech: techM.result,
+    customers: customersM.result,
+  };
+
+  const aiM = await runModule('aiAnalysis', 30_000, () => analyzeAi(partialReport), defaultAiAnalysis);
 
   const report: Report = {
     domain,
