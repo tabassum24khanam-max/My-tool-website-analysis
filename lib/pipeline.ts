@@ -35,6 +35,7 @@ import {
   addSearchHistory,
 } from '@/lib/db';
 import { normalizeDomain, normalizeUrl } from '@/lib/utils';
+import { estimated, metricValue } from '@/lib/types';
 
 const MODULE_TIMEOUT = 20_000;
 const CRAWL_TIMEOUT = 45_000;
@@ -121,6 +122,26 @@ export async function analyzeWebsite(
     tech: techM.result,
     customers: customersM.result,
   };
+
+  const monthlyVisits = metricValue(trafficM.result.estimatedMonthlyVisits);
+  const convRate = metricValue(productsM.result.estimatedConversionRate);
+  const aov = metricValue(productsM.result.estimatedAOV);
+
+  if (monthlyVisits && convRate) {
+    const monthlySales = Math.round(monthlyVisits * (convRate / 100));
+    productsM.result.estimatedMonthlySales = estimated(
+      monthlySales,
+      'low',
+      `${monthlyVisits.toLocaleString()} visitors × ${convRate}% conversion`
+    );
+    if (aov) {
+      productsM.result.estimatedYearlyRevenue = estimated(
+        Math.round(monthlySales * aov * 12),
+        'low',
+        `${monthlySales.toLocaleString()} monthly sales × $${aov} AOV × 12 months`
+      );
+    }
+  }
 
   const aiM = await runModule('aiAnalysis', 30_000, () => analyzeAi(partialReport), defaultAiAnalysis);
 

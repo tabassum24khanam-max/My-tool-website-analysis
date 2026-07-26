@@ -18,7 +18,7 @@ import { CompetitorsSection } from '@/components/sections/competitors-section';
 import { TechSection } from '@/components/sections/tech-section';
 import { CustomersSection } from '@/components/sections/customers-section';
 import { AiAnalysisSection } from '@/components/sections/ai-analysis-section';
-import { ArrowLeft, RefreshCw, Download, Bookmark, BookmarkCheck } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Download, FileSpreadsheet, Bookmark, BookmarkCheck } from 'lucide-react';
 
 export default function ReportPage() {
   const params = useParams();
@@ -76,15 +76,22 @@ export default function ReportPage() {
     }).catch(() => setSaved(!next));
   };
 
-  const exportJson = () => {
+  const exportReport = (format: 'json' | 'csv') => {
     if (!report) return;
-    const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${domain}-report.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+    if (format === 'json') {
+      const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = `${domain}-report.json`;
+      a.click();
+      URL.revokeObjectURL(blobUrl);
+    } else {
+      const a = document.createElement('a');
+      a.href = `/api/export/${domain}?format=csv`;
+      a.download = `${domain}-report.csv`;
+      a.click();
+    }
   };
 
   return (
@@ -130,12 +137,20 @@ export default function ReportPage() {
               Refresh
             </button>
             <button
-              onClick={exportJson}
+              onClick={() => exportReport('json')}
               disabled={!report}
               className="flex items-center gap-1.5 rounded-lg border border-[var(--border)] px-3 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50"
             >
               <Download size={14} />
-              Export
+              JSON
+            </button>
+            <button
+              onClick={() => exportReport('csv')}
+              disabled={!report}
+              className="flex items-center gap-1.5 rounded-lg border border-[var(--border)] px-3 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50"
+            >
+              <FileSpreadsheet size={14} />
+              CSV
             </button>
           </div>
         </div>
