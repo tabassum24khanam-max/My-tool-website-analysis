@@ -1,9 +1,0 @@
-node_modules
-.next
-.git
-*.db
-*.db-shm
-*.db-wal
-data/
-docs/
-scripts/
