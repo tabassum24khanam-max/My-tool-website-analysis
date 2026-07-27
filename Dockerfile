@@ -1,24 +1,32 @@
-FROM node:20-slim AS base
+FROM node:20-slim AS deps
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci
 
-RUN apt-get update && apt-get install -y \
-    libnss3 libatk-bridge2.0-0 libdrm2 libxkbcommon0 libgbm1 \
-    libpango-1.0-0 libcairo2 libasound2 libxshmfence1 libx11-xcb1 \
-    libxcomposite1 libxdamage1 libxrandr2 libatspi2.0-0 libcups2 \
-    && rm -rf /var/lib/apt/lists/*
+FROM node:20-slim AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+ENV NEXT_TELEMETRY_DISABLED=1
+RUN npm run build
+
+FROM node:20-slim
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends ca-certificates fonts-liberation && \
+    rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-COPY package.json package-lock.json ./
-RUN npm ci --omit=dev
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
 
-RUN npx playwright install chromium --with-deps 2>/dev/null || true
-
-COPY . .
-RUN npm run build
+RUN npx -y playwright install --with-deps chromium 2>/dev/null || true
 
 ENV NODE_ENV=production
 ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
 
 EXPOSE 3000
 
-CMD ["npm", "start"]
+CMD ["node", "server.js"]
