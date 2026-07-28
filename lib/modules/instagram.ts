@@ -39,9 +39,17 @@ export async function analyzeInstagramProfile(handle: string): Promise<ProfileSt
     if (res.status === 404) {
       return profileUnavailable(`Instagram profile @${clean} not found`);
     }
+    // Instagram throttles after only a handful of requests and answers 401/429
+    // with "please wait a few minutes", which is temporary and quite different
+    // from a missing profile. Say which one it is.
+    if (res.status === 401 || res.status === 429) {
+      return profileUnavailable(
+        'Instagram is rate-limiting this server — it allows only a few profile lookups before asking callers to wait. Try again in a few minutes; cached results are reused for 24 hours.'
+      );
+    }
     if (!res.ok) {
       return profileUnavailable(
-        `Instagram returned HTTP ${res.status} (likely a login wall on this server IP)`
+        `Instagram returned HTTP ${res.status} — it may be throttling or requiring a login for this server's IP`
       );
     }
     payload = await res.json();

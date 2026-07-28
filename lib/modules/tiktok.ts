@@ -45,6 +45,14 @@ export async function analyzeTikTokProfile(handle: string): Promise<ProfileStats
       },
       signal: AbortSignal.timeout(20_000),
     });
+    if (res.status === 404) {
+      return profileUnavailable(`TikTok profile @${clean} not found`);
+    }
+    if (res.status === 429) {
+      return profileUnavailable(
+        'TikTok is rate-limiting this server. Try again in a few minutes; cached results are reused for 24 hours.'
+      );
+    }
     if (!res.ok) {
       return profileUnavailable(`TikTok returned HTTP ${res.status} for @${clean}`);
     }

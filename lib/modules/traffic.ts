@@ -21,13 +21,24 @@ const INDUSTRY_BENCHMARKS: Record<string, BenchmarkSet> = {
   blog: { bounceRate: 60, pagesPerVisit: 1.8, avgSessionSeconds: 120, newVisitorPct: 75, desktop: 50, mobile: 45, tablet: 5 },
 };
 
+/**
+ * Monthly visits ≈ 38.5B / rank, a Zipf fit regressed over published traffic
+ * figures spanning rank 1 to rank ~2000.
+ *
+ * The previous 5B/rank^0.88 × 30 curve overshot badly at the ranks most sites
+ * fall in: 22x for shopify.com and 35x for stripe.com. This fit holds those to
+ * roughly 5x in the worst case.
+ *
+ * Even so this is an order-of-magnitude figure, not a measurement. Tranco and
+ * Radar rank domain popularity — which counts embedded scripts, API hosts and
+ * DNS lookups — not human page views, so infrastructure domains rank far above
+ * their actual readership. stripe.com ranks 236 with ~35M monthly visits while
+ * notion.so ranks 1865 with more; no rank-based curve can order those correctly.
+ * Every value derived from this is reported as a low-confidence estimate.
+ */
 function rankToVisits(rank: number): number {
-  // Power-law model: daily visits ≈ 5_000_000_000 / rank^0.88
-  // Calibrated against known sites (Wikipedia #5 → ~100M/day, stripe.com ~500K → #3000)
-  // Monthly = daily × 30
   if (rank <= 0) return 0;
-  const dailyVisits = 5_000_000_000 / Math.pow(rank, 0.88);
-  return Math.round(dailyVisits * 30);
+  return Math.round(38_562_435_047 / Math.pow(rank, 1.0));
 }
 
 function formatDuration(seconds: number): string {
@@ -152,10 +163,10 @@ export async function analyzeTraffic(crawl: CrawlResult): Promise<TrafficResult>
     }
   }
 
-  const confidence =
-    trancoRank && cfRank
-      ? ('medium' as const)
-      : ('low' as const);
+  // Rank measures domain popularity rather than page views, so agreement
+  // between two rank sources does not make the derived traffic figure reliable.
+  // These stay low-confidence regardless.
+  const confidence = 'low' as const;
 
   const benchmarks = INDUSTRY_BENCHMARKS.default;
 
@@ -164,7 +175,7 @@ export async function analyzeTraffic(crawl: CrawlResult): Promise<TrafficResult>
     estimatedMonthlyVisits: estimated(
       monthlyVisits,
       confidence,
-      `Power-law model: 5B / rank^0.88 × 30 (rank=${rank} from ${rankSource})`
+      `Zipf model: 38.5B / rank (rank=${rank} from ${rankSource}). Order of magnitude only — rank counts domain popularity, including embedded scripts and API hosts, not human visits. Expect several-fold error.`
     ),
     dailyVisits: estimated(dailyVisits, confidence, 'Monthly estimate / 30'),
     weeklyVisits: estimated(weeklyVisits, confidence, 'Monthly estimate / 4.3'),
