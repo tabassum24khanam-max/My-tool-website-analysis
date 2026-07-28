@@ -35,13 +35,25 @@ This same key also powers **direct channel analysis**: pasting a YouTube channel
 URL on the home page routes to `/api/analyze-channel` instead of the website
 pipeline. No extra API or key is involved.
 
-### TikTok and Instagram — NO free API (do not add one)
-There is deliberately no data source here. TikTok exposes account statistics only
-through paid providers or an approved TikTok for Business account, and the
-Instagram Graph API only reports on accounts the caller owns and requires app
-review. Pasting a TikTok or Instagram profile therefore records the handle and
-profile link and returns every statistic as `unavailable` with that explanation.
-Do not add a scraper or a paid provider to fill this gap.
+## 5b. TikTok and Instagram public profile payloads — no key, BEST EFFORT
+Neither platform offers a free API for another account's statistics: TikTok's
+Display API covers only accounts that authorise your app, and the Instagram
+Graph API covers only accounts you own. These two read the same public payloads
+the platforms' own web clients read. They are undocumented and unsupported.
+
+- TikTok: `GET https://www.tiktok.com/@{handle}` — parse the JSON inside
+  `<script id="__UNIVERSAL_DATA_FOR_REHYDRATION__">`, then
+  `__DEFAULT_SCOPE__["webapp.user-detail"].userInfo.{user,stats}`.
+  `heartCount` is a signed 32-bit int and goes negative past ~2.1B likes; add
+  2^32 to correct it.
+- Instagram: `GET https://i.instagram.com/api/v1/users/web_profile_info/?username={handle}`
+  with `X-IG-App-ID: 936619743392459`. A bare request returns HTTP 400 — it only
+  answers with browser-like headers (Referer, Origin, sec-fetch-*).
+
+Both are IP-sensitive and may be rate-limited, bot-checked or served a login
+wall, especially from datacenter IPs like a hosted server's. Treat every failure
+as `unavailable` with the reason; never substitute a guess. Do not add a paid
+provider or a headless-browser scraper to push through a block.
 
 ## 6. Meta Ad Library — free token, OPTIONAL (skip gracefully)
 `GET https://graph.facebook.com/v19.0/ads_archive?search_page_ids={pageId}&ad_reached_countries=['US']&fields=ad_creative_bodies,ad_delivery_start_time,ad_delivery_stop_time,publisher_platforms&access_token=$FB_AD_LIBRARY_TOKEN`

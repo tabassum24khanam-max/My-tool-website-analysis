@@ -127,10 +127,58 @@ export default function ChannelPage() {
               <div className="flex gap-3 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-200">
                 <Info size={18} className="mt-0.5 shrink-0" />
                 <div>
-                  <p className="font-medium mb-1">{label} statistics are not available</p>
+                  <p className="font-medium mb-1">How these {label} figures are sourced</p>
                   <p>{report.note}</p>
                 </div>
               </div>
+            )}
+
+            {report.profile && (
+              <>
+                <Card>
+                  <CardTitle>Profile Overview</CardTitle>
+                  <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                    <MetricValue metric={report.profile.displayName} label="Name" />
+                    <MetricValue
+                      metric={report.profile.followers}
+                      label="Followers"
+                      format={formatNumber}
+                    />
+                    <MetricValue
+                      metric={report.profile.postCount}
+                      label={report.platform === 'tiktok' ? 'Videos' : 'Posts'}
+                      format={formatNumber}
+                    />
+                    <MetricValue
+                      metric={report.profile.following}
+                      label="Following"
+                      format={formatNumber}
+                    />
+                  </div>
+                </Card>
+
+                <Card>
+                  <CardTitle>Engagement</CardTitle>
+                  <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+                    <MetricValue
+                      metric={report.profile.totalLikes}
+                      label="Total Likes"
+                      format={formatNumber}
+                    />
+                    <MetricValue
+                      metric={report.profile.avgLikesPerPost}
+                      label="Avg Likes / Post"
+                      format={formatNumber}
+                    />
+                    <MetricValue metric={report.profile.verified} label="Verified" />
+                  </div>
+                </Card>
+
+                <Card>
+                  <CardTitle>Bio</CardTitle>
+                  <MetricValue metric={report.profile.bio} />
+                </Card>
+              </>
             )}
 
             {report.platform === 'youtube' && (
@@ -157,7 +205,7 @@ export default function ChannelPage() {
               </Card>
             )}
 
-            <VideoSection data={report.video} />
+            {report.platform === 'youtube' && <VideoSection data={report.video} />}
           </div>
         ) : null}
       </main>

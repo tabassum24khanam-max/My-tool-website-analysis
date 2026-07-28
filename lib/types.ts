@@ -302,3 +302,15 @@ export interface CrawlResult {
   cookies: string[];
   allHtml: string;
 }
+
+/** Public profile statistics for a TikTok or Instagram account. */
+export interface ProfileStats {
+  displayName: Metric<string>;
+  followers: Metric<number>;
+  following: Metric<number>;
+  totalLikes: Metric<number>;
+  postCount: Metric<number>;
+  verified: Metric<boolean>;
+  bio: Metric<string>;
+  avgLikesPerPost: Metric<number>;
+}
