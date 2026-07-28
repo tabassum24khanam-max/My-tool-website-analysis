@@ -3,6 +3,7 @@
 import { useState, useEffect, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { Header } from '@/components/header';
+import { parseSocialUrl } from '@/lib/social-url';
 import { Search, Clock, ArrowRight } from 'lucide-react';
 
 export default function Home() {
@@ -27,6 +28,26 @@ export default function Home() {
     setError('');
 
     try {
+      // A pasted YouTube / TikTok / Instagram profile is analysed as a channel
+      // rather than as a company website.
+      const target = parseSocialUrl(url.trim());
+      if (target) {
+        const res = await fetch('/api/analyze-channel', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: target.url }),
+        });
+
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.error || 'Channel analysis failed');
+        }
+
+        const report = await res.json();
+        router.push(`/channel/${report.platform}/${encodeURIComponent(report.handle)}`);
+        return;
+      }
+
       const res = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -58,7 +79,8 @@ export default function Home() {
         <div className="text-center mb-10">
           <h1 className="text-4xl font-bold mb-3">Website Intelligence Platform</h1>
           <p className="text-lg text-[var(--text-secondary)]">
-            Paste any company URL to get instant business intelligence
+            Paste a company URL for business intelligence, or a YouTube channel
+            for content analytics
           </p>
         </div>
 
@@ -69,7 +91,7 @@ export default function Home() {
               type="text"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
-              placeholder="Enter website URL (e.g. stripe.com)"
+              placeholder="Website or channel URL (stripe.com, youtube.com/@mrbeast)"
               className="flex-1 bg-transparent px-4 py-4 text-lg outline-none placeholder:text-[var(--text-muted)]"
               disabled={loading}
             />

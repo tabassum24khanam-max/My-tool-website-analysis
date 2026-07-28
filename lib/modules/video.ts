@@ -239,98 +239,60 @@ function toVideoData(v: YouTubeVideo): VideoData {
   };
 }
 
-export async function analyzeVideo(crawl: CrawlResult): Promise<VideoResult> {
-  const apiKey = process.env.YOUTUBE_API_KEY;
-  const handle = extractYouTubeHandle(crawl.allHtml);
+/** Fills every VideoResult field with the same unavailable reason. */
+function videoUnavailable(reason: string, channelName?: string): VideoResult {
+  return {
+    channelName: channelName
+      ? measured(channelName, 'YouTube channel handle')
+      : unavailable(reason),
+    subscribers: unavailable(reason),
+    totalVideos: unavailable(reason),
+    mostViewed: unavailable(reason),
+    highestEngagement: unavailable(reason),
+    avgViews: unavailable(reason),
+    avgLikes: unavailable(reason),
+    avgComments: unavailable(reason),
+    postingFrequency: unavailable(reason),
+    avgVideoLength: unavailable(reason),
+    uploadConsistency: unavailable(reason),
+    commonTopics: unavailable(reason),
+    commonHooks: unavailable(reason),
+    aiContentStrategy: unavailable('AI mode is off'),
+    aiMarketingStrategy: unavailable('AI mode is off'),
+    aiAudienceStrategy: unavailable('AI mode is off'),
+  };
+}
 
-  if (!handle) {
-    return {
-      channelName: unavailable('No YouTube channel link found on the website'),
-      subscribers: unavailable('No YouTube channel found'),
-      totalVideos: unavailable('No YouTube channel found'),
-      mostViewed: unavailable('No YouTube channel found'),
-      highestEngagement: unavailable('No YouTube channel found'),
-      avgViews: unavailable('No YouTube channel found'),
-      avgLikes: unavailable('No YouTube channel found'),
-      avgComments: unavailable('No YouTube channel found'),
-      postingFrequency: unavailable('No YouTube channel found'),
-      avgVideoLength: unavailable('No YouTube channel found'),
-      uploadConsistency: unavailable('No YouTube channel found'),
-      commonTopics: unavailable('No YouTube channel found'),
-      commonHooks: unavailable('No YouTube channel found'),
-      aiContentStrategy: unavailable('AI mode is off'),
-      aiMarketingStrategy: unavailable('AI mode is off'),
-      aiAudienceStrategy: unavailable('AI mode is off'),
-    };
-  }
+/**
+ * Analyses a YouTube channel from a handle or channel id. Used both by the
+ * website pipeline (handle discovered on the page) and by the channel pipeline
+ * (handle pasted directly by the user).
+ */
+export async function analyzeYouTubeChannel(handle: string): Promise<VideoResult> {
+  const apiKey = process.env.YOUTUBE_API_KEY;
 
   if (!apiKey) {
-    return {
-      channelName: measured(handle, 'YouTube link from website'),
-      subscribers: unavailable('No YOUTUBE_API_KEY configured'),
-      totalVideos: unavailable('No YOUTUBE_API_KEY configured'),
-      mostViewed: unavailable('No YOUTUBE_API_KEY configured'),
-      highestEngagement: unavailable('No YOUTUBE_API_KEY configured'),
-      avgViews: unavailable('No YOUTUBE_API_KEY configured'),
-      avgLikes: unavailable('No YOUTUBE_API_KEY configured'),
-      avgComments: unavailable('No YOUTUBE_API_KEY configured'),
-      postingFrequency: unavailable('No YOUTUBE_API_KEY configured'),
-      avgVideoLength: unavailable('No YOUTUBE_API_KEY configured'),
-      uploadConsistency: unavailable('No YOUTUBE_API_KEY configured'),
-      commonTopics: unavailable('No YOUTUBE_API_KEY configured'),
-      commonHooks: unavailable('No YOUTUBE_API_KEY configured'),
-      aiContentStrategy: unavailable('AI mode is off'),
-      aiMarketingStrategy: unavailable('AI mode is off'),
-      aiAudienceStrategy: unavailable('AI mode is off'),
-    };
+    return videoUnavailable('No YOUTUBE_API_KEY configured', handle);
   }
 
   const channel = await resolveChannel(handle, apiKey);
   if (!channel) {
-    return {
-      channelName: measured(handle, 'YouTube link from website'),
-      subscribers: unavailable(`Could not resolve YouTube channel for handle "${handle}"`),
-      totalVideos: unavailable('Channel resolution failed'),
-      mostViewed: unavailable('Channel resolution failed'),
-      highestEngagement: unavailable('Channel resolution failed'),
-      avgViews: unavailable('Channel resolution failed'),
-      avgLikes: unavailable('Channel resolution failed'),
-      avgComments: unavailable('Channel resolution failed'),
-      postingFrequency: unavailable('Channel resolution failed'),
-      avgVideoLength: unavailable('Channel resolution failed'),
-      uploadConsistency: unavailable('Channel resolution failed'),
-      commonTopics: unavailable('Channel resolution failed'),
-      commonHooks: unavailable('Channel resolution failed'),
-      aiContentStrategy: unavailable('AI mode is off'),
-      aiMarketingStrategy: unavailable('AI mode is off'),
-      aiAudienceStrategy: unavailable('AI mode is off'),
-    };
+    return videoUnavailable(`Could not resolve YouTube channel "${handle}"`, handle);
   }
 
   const videos = await fetchRecentVideos(channel.uploadsPlaylistId, apiKey);
   const analysis = analyzeVideoPatterns(videos);
-
   const src = 'YouTube Data API v3';
 
   return {
     channelName: measured(channel.title, src),
     subscribers: measured(channel.subscribers, src),
     totalVideos: measured(channel.videoCount, src),
-    mostViewed: analysis
-      ? measured(analysis.mostViewed, src)
-      : unavailable('No videos found'),
-    highestEngagement: analysis
-      ? measured(analysis.highestEngagement, src)
-      : unavailable('No videos found'),
-    avgViews: analysis
-      ? measured(analysis.avgViews, src)
-      : unavailable('No videos found'),
-    avgLikes: analysis
-      ? measured(analysis.avgLikes, src)
-      : unavailable('No videos found'),
-    avgComments: analysis
-      ? measured(analysis.avgComments, src)
-      : unavailable('No videos found'),
+    mostViewed: analysis ? measured(analysis.mostViewed, src) : unavailable('No videos found'),
+    highestEngagement: analysis ? measured(analysis.highestEngagement, src) : unavailable('No videos found'),
+    avgViews: analysis ? measured(analysis.avgViews, src) : unavailable('No videos found'),
+    avgLikes: analysis ? measured(analysis.avgLikes, src) : unavailable('No videos found'),
+    avgComments: analysis ? measured(analysis.avgComments, src) : unavailable('No videos found'),
     postingFrequency: analysis
       ? measured(analysis.frequency, `${src} — computed from last ${videos.length} videos`)
       : unavailable('No videos found'),
@@ -350,4 +312,14 @@ export async function analyzeVideo(crawl: CrawlResult): Promise<VideoResult> {
     aiMarketingStrategy: unavailable('AI mode is off'),
     aiAudienceStrategy: unavailable('AI mode is off'),
   };
+}
+
+export async function analyzeVideo(crawl: CrawlResult): Promise<VideoResult> {
+  const handle = extractYouTubeHandle(crawl.allHtml);
+
+  if (!handle) {
+    return videoUnavailable('No YouTube channel link found on the website');
+  }
+
+  return analyzeYouTubeChannel(handle);
 }

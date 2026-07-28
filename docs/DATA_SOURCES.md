@@ -31,6 +31,18 @@ Key: Google Cloud console → enable "YouTube Data API v3" → API key. 10k unit
 - Uploads: `GET .../playlistItems?part=contentDetails&playlistId={uploadsId}&maxResults=50`
 - Video stats: `GET .../videos?part=snippet,statistics,contentDetails&id={ids}` (batch 50)
 
+This same key also powers **direct channel analysis**: pasting a YouTube channel
+URL on the home page routes to `/api/analyze-channel` instead of the website
+pipeline. No extra API or key is involved.
+
+### TikTok and Instagram — NO free API (do not add one)
+There is deliberately no data source here. TikTok exposes account statistics only
+through paid providers or an approved TikTok for Business account, and the
+Instagram Graph API only reports on accounts the caller owns and requires app
+review. Pasting a TikTok or Instagram profile therefore records the handle and
+profile link and returns every statistic as `unavailable` with that explanation.
+Do not add a scraper or a paid provider to fill this gap.
+
 ## 6. Meta Ad Library — free token, OPTIONAL (skip gracefully)
 `GET https://graph.facebook.com/v19.0/ads_archive?search_page_ids={pageId}&ad_reached_countries=['US']&fields=ad_creative_bodies,ad_delivery_start_time,ad_delivery_stop_time,publisher_platforms&access_token=$FB_AD_LIBRARY_TOKEN`
 Token: developers.facebook.com app → Graph API token. Note: full non-political ad data
