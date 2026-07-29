@@ -24,18 +24,29 @@ function detectPopups(scripts: string[], html: string): boolean {
     lower.includes('popup-overlay') || lower.includes('data-popup');
 }
 
+// Ordinary sentences like "get a discount code for your order" contain the
+// keyword immediately followed by a common word, which a case-insensitive
+// match on the whole pattern was capturing as if it were the code itself.
+const CODE_STOPWORDS = new Set([
+  'FOR', 'YOUR', 'NOW', 'HERE', 'BELOW', 'TODAY', 'ABOVE', 'THIS', 'THAT',
+  'THE', 'AND', 'OUR', 'YOU', 'ANY', 'ALL', 'NEW', 'GET', 'USE', 'AT',
+]);
+
 function detectDiscounts(html: string): { hasDiscounts: boolean; codes: string[] } {
   const lower = html.toLowerCase();
   const hasDiscounts = lower.includes('discount') || lower.includes('% off') ||
     lower.includes('sale') || lower.includes('coupon') || lower.includes('promo code');
 
   const codes: string[] = [];
-  const codePatterns = html.match(/(?:code|coupon|promo)[:\s]+["']?([A-Z0-9]{3,20})["']?/gi);
-  if (codePatterns) {
-    for (const match of codePatterns) {
-      const code = match.replace(/^(?:code|coupon|promo)[:\s]+["']?/i, '').replace(/["']$/, '');
-      if (code.length >= 3 && code.length <= 20) codes.push(code);
-    }
+  // The keyword (code/coupon/promo) is matched case-insensitively via explicit
+  // casing alternatives, but the captured code itself is matched without the
+  // /i/ flag so "code for" can no longer capture the lowercase word "for" as
+  // if it were an actual all-caps coupon code.
+  const codePattern = /(?:[Cc][Oo][Dd][Ee]|[Cc][Oo][Uu][Pp][Oo][Nn]|[Pp][Rr][Oo][Mm][Oo])[:\s]+["']?([A-Z][A-Z0-9]{2,19})["']?/g;
+  let match: RegExpExecArray | null;
+  while ((match = codePattern.exec(html)) !== null) {
+    const code = match[1];
+    if (!CODE_STOPWORDS.has(code)) codes.push(code);
   }
 
   return { hasDiscounts, codes: [...new Set(codes)] };

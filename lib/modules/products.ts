@@ -4,14 +4,27 @@ import * as cheerio from 'cheerio';
 
 function detectCustomerType(text: string): string {
   const lower = text.toLowerCase();
-  const b2bSignals = ['enterprise', 'business', 'team', 'organization', 'company', 'corporate', 'b2b', 'per seat', 'per user'];
-  const b2cSignals = ['personal', 'individual', 'family', 'consumer', 'b2c', 'per month', 'get started'];
+  // Single generic words like "business", "company" or "team" appear in nearly
+  // any privacy policy or footer regardless of who the actual customer is, and
+  // were misclassifying plain consumer sites as B2B. Multi-word phrases that
+  // only show up in an actual sales or shopping context are far more specific.
+  const b2bSignals = [
+    'enterprise plan', 'for business', 'for businesses', 'for teams',
+    'for enterprise', 'request a demo', 'book a demo', 'contact sales',
+    'per seat', 'per user', 'b2b', 'wholesale', 'bulk order',
+    'business account', 'corporate account', 'volume discount', 'invoice billing',
+  ];
+  const b2cSignals = [
+    'add to cart', 'buy now', 'shop now', 'free shipping', 'gift card',
+    'my account', 'wishlist', 'b2c', 'personal use', 'in your cart',
+    'checkout now', 'track my order',
+  ];
 
   const b2bScore = b2bSignals.filter((s) => lower.includes(s)).length;
   const b2cScore = b2cSignals.filter((s) => lower.includes(s)).length;
 
-  if (b2bScore > b2cScore + 1) return 'B2B';
-  if (b2cScore > b2bScore + 1) return 'B2C';
+  if (b2bScore > b2cScore) return 'B2B';
+  if (b2cScore > b2bScore) return 'B2C';
   if (b2bScore > 0 && b2cScore > 0) return 'B2B + B2C';
   return 'Unknown';
 }

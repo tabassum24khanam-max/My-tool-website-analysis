@@ -3,6 +3,34 @@ import { measured, estimated, unavailable } from '@/lib/types';
 import * as cheerio from 'cheerio';
 import { fetchWithTimeout } from '@/lib/utils';
 
+/**
+ * JSON-LD Organization.address is usually a schema.org PostalAddress object,
+ * not a string. String(object) collapses it to "[object Object]", so build a
+ * readable line out of its parts instead.
+ */
+function formatAddress(address: unknown): string | null {
+  if (!address) return null;
+  if (typeof address === 'string') return address.trim() || null;
+  if (typeof address !== 'object') return null;
+
+  const a = address as Record<string, unknown>;
+  const parts = [
+    a.streetAddress,
+    a.addressLocality,
+    a.addressRegion,
+    a.postalCode,
+    a.addressCountry,
+  ]
+    .map((p) => {
+      if (typeof p === 'string') return p.trim();
+      if (p && typeof p === 'object' && 'name' in p) return String((p as { name: unknown }).name);
+      return null;
+    })
+    .filter((p): p is string => !!p);
+
+  return parts.length > 0 ? parts.join(', ') : null;
+}
+
 function findMeta($: cheerio.CheerioAPI, names: string[]): string | null {
   for (const name of names) {
     const content =
@@ -258,9 +286,12 @@ export async function analyzeSnapshot(crawl: CrawlResult): Promise<SnapshotResul
     contactPhones: phones.length > 0
       ? measured(phones, 'Phone pattern extraction from page HTML')
       : unavailable('No phone numbers found'),
-    headquarters: orgJsonLd?.address
-      ? measured(String(orgJsonLd.address), 'JSON-LD Organization address')
-      : unavailable('Headquarters not found in page data'),
+    headquarters: (() => {
+      const formatted = formatAddress(orgJsonLd?.address);
+      return formatted
+        ? measured(formatted, 'JSON-LD Organization address')
+        : unavailable('Headquarters not found in page data');
+    })(),
     yearFounded: yearFounded
       ? measured(yearFounded, yearMatch ? 'About page text' : 'RDAP domain registration')
       : unavailable('Year founded not found'),
